@@ -30,7 +30,7 @@ class yolov4(object):
         self.bridge = CvBridge()
         self.init_params()
         self.init_yolo()
-        self.cuda_ctx = cuda.Device(0).make_context()
+        #self.cuda_ctx = cuda.Device(0).make_context()
         self.trt_yolo = TrtYOLO(
             (self.model_path + self.model), (self.h, self.w), self.category_num)
         self.tic = time.time()
@@ -40,17 +40,17 @@ class yolov4(object):
     def __del__(self):
         """ Destructor """
 
-        self.cuda_ctx.pop()
+        #self.cuda_ctx.pop()
         del self.trt_yolo
-        del self.cuda_ctx
+        #del self.cuda_ctx
 
     def clean_up(self):
         """ Backup destructor: Release cuda memory """
 
         if self.trt_yolo is not None:
-            self.cuda_ctx.pop()
+            #self.cuda_ctx.pop()
             del self.trt_yolo
-            del self.cuda_ctx
+            #del self.cuda_ctx
 
     def init_params(self):
         """ Initializes ros parameters """
@@ -65,7 +65,7 @@ class yolov4(object):
         self.input_shape = rospy.get_param("/input_shape", "288")
         self.conf_th = rospy.get_param("/confidence_threshold", 0.5)
         self.show_img = rospy.get_param("/show_image", True)
-        self.depth_only = rospy.get_param("/depth_only", False)
+        self.depth_only = rospy.get_param("/depth_only", True)
         self.detection_pub = rospy.Publisher(
             "detections", Image, queue_size=1)
 

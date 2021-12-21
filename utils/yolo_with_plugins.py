@@ -224,6 +224,9 @@ class TrtYOLO(object):
         del self.outputs
         del self.inputs
         del self.stream
+        self.cuda_ctx.pop()
+        del self.cuda_ctx
+        del self.context
 
     def allocate_buffers(self, engine, grid_sizes):
         """Allocates all host/device in/out buffers required for an engine.
