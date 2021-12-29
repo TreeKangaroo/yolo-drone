@@ -18,7 +18,7 @@ class pose(object):
     # constructor
     def __init__(self):
         self.bridge = CvBridge()
-        self.filename = "donModel.onnx"
+        self.filename = "/home/michelle/catkin_ws/src/yolov4_trt_ros/pose/donModel.onnx"
         self.input_node = 'input'
         self.ort_sess = ort.InferenceSession(self.filename)
         

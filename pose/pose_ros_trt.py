@@ -33,7 +33,7 @@ class TrtPose:
         self.cuda_ctx = cuda.Device(0).make_context()
         self.TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
         self.trt_runtime = trt.Runtime(self.TRT_LOGGER)
-        self.load_engine('donModel.plan')
+        self.load_engine('/home/michelle/catkin_ws/src/yolov4_trt_ros/pose/donModel.plan')
         self.context = self.engine.create_execution_context()
         self.allocate_buffers(trt.float32)
         
