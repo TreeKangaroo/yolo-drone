@@ -18,7 +18,7 @@ class Controller:
         # Instantiate a setpoints message
         self.sp = PositionTarget()
         # set the flag to use position setpoints and yaw angle
-        self.sp.type_mask = int('000111111000', 2)
+        self.sp.type_mask = int('111111111000', 2)
         # LOCAL_NED
         self.sp.coordinate_frame = 1
 
@@ -33,7 +33,7 @@ class Controller:
         self.FENCE_LIMIT = 5.0
 
         # A Message for the current local position of the drone
-        self.local_pos = Point(0.0, 0.0, 3.0)
+        self.local_pos = Point(0.0, 0.0, 0.0)
 
         # initial values for setpoints
         self.sp.position.x = 0.0
@@ -64,9 +64,9 @@ class Controller:
         self.local_pos.x = msg.pose.position.x
         self.local_pos.y = msg.pose.position.y
         self.local_pos.z = msg.pose.position.z
-        print('receive position')
+        print('Current position ({:f}, {:f}, {:f})'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))  
         self.toc = rospy.Time.now().to_sec()
-        print('received state', 'update time: ', self.toc-self.tic)
+        print('Current drone state: ', self.state.mode)
         self.tic = self.toc
  
 
@@ -104,12 +104,13 @@ def main():
 
     # controller object
     cnt = Controller()
+    print('!!!! CONTROLLER INIT !!!!')
 
     # ROS loop rate
     rate = rospy.Rate(20.0)
 
     # Subscribe to drone state
-    #rospy.Subscriber('mavros/state', State, cnt.stateCb)
+    rospy.Subscriber('mavros/state', State, cnt.stateCb)
 
     # Subscribe to drone's local position
     rospy.Subscriber('mavros/local_position/pose', PoseStamped, cnt.posCb)
@@ -119,6 +120,7 @@ def main():
 
     # Setpoint publisher    
     sp_pub = rospy.Publisher('mavros/setpoint_raw/local', PositionTarget, queue_size=1)
+    print("!!!! SUB / PUB INIT !!!!!")
 
 
     # test if drone can be armed
@@ -141,7 +143,7 @@ def main():
       #  rate.sleep()
         
     # show current state
-    #cnt.show_state()
+    cnt.show_state()
     
     
     # show current position
