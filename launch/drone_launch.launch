@@ -1,0 +1,29 @@
+<launch>
+	<!-- yolov4_trt_node -->
+	<node pkg="yolov4_trt_ros" type="trt_yolo_v4.py" name="yolov4_trt_node" output="screen">		
+		<param name="video_topic" type="string" value="/video_source/raw" />
+		<param name="model" type="string" value="yolov4" />	
+		<param name="model_path" type="string" value="$(find yolov4_trt_ros)/yolo/" />
+		<param name="input_shape" type="string" value="288" />
+		<param name="category_number" type="int" value="80" />
+		<param name="confidence_threshold" type="double" value="0.5" />
+		<param name="show_image" type="bool" value="True" />
+	</node>
+	
+	<!-- mavros launch node -->
+	<include file="$(find mavros)/launch/node.launch">
+		<arg name="pluginlists_yaml" value="$(find mavros)/launch/px4_pluginlists.yaml" />
+		<arg name="config_yaml" value="$(find mavros)/launch/px4_config.yaml" />
+
+		<arg name="fcu_url" value="/dev/ttyTHS0:115200" />
+		<arg name="gcs_url" value="255" />
+		<arg name="tgt_system" value="1" />
+		<arg name="tgt_component" value="1" />
+		<arg name="log_output" value="screen" />
+		<arg name="fcu_protocol" value="v1.0" />
+		<arg name="respawn_mavros" default="false" />
+	</include>
+		
+	<!-- python code launch -->
+	<node name="" pkg="yolo_trt_ros" type=".py" output="screen"/>
+</launch>
