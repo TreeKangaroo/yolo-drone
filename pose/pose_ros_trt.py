@@ -3,7 +3,7 @@
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from std_msgs.msg import String
+from std_msgs.msg import String, Int16
 import cv2
 import numpy as np
 
@@ -85,6 +85,7 @@ class pose:
         self.trt_pose = TrtPose()
         
         self.img_sub = rospy.Subscriber('/detections', Image, self.callback_detection, queue_size=1, buff_size=640*480*6)
+        self.pose_pub = rospy.Publisher('/poseLabel', Int16, queue_size=1)
 
     def __del__(self):
         """ Destructor """
@@ -100,7 +101,7 @@ class pose:
             #self.cuda_ctx.pop()
             del self.trt_pose
             #del self.cuda_ctx    
-    
+
     def callback_detection(self, ros_data):  
         # get bonding box
         bbox = [int(x) for x in ros_data.header.frame_id.split()]
@@ -131,7 +132,8 @@ class pose:
             depth_data = (depth_data/65536).astype(np.float32)
             depth_data = np.expand_dims(depth_data, axis=(0, 3))
             out = self.trt_pose.detect(depth_data)
-            print(out)
+            print(np.argmax(out))
+            self.pose_pub.publish(out)
         else:
             print('No object detected')
 
