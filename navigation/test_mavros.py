@@ -9,6 +9,7 @@ from geometry_msgs.msg import Point, PoseStamped
 from mavros_msgs.msg import *
 from mavros_msgs.srv import *
 from utils.fcuModes import fcuModes
+from sensor_msgs.msg import NavSatFix
 
 class Controller:
     # initialization method
@@ -49,7 +50,7 @@ class Controller:
         # manuver label
         self.manuver = 'landed'
         
-        self.gps = GPSRAW()
+        self.gps = NavSatFix()
         
         self.tic = rospy.Time.now().to_sec()
         self.toc = rospy.Time.now().to_sec()
@@ -73,11 +74,13 @@ class Controller:
     ## Drone State callback
     def stateCb(self, msg):
         self.state = msg
-
+    def spCb(self, msg):
+         print('Setpoint velocity ({:f}, {:f}, {:f}, {:f})'.format(msg.velocity.x, msg.velocity.y, msg.velocity.z, msg.yaw_rate))
 
     ## GPS callback
     def gpsCb(self, msg):
         self.gps = msg
+        print('GPS location ({:f}, {:f}, {:f})'.format(self.gps.latitude, self.gps.longitude, self.gps.altitude))
         
     # functions
     def show_state(self):
@@ -87,7 +90,7 @@ class Controller:
         print('Current position ({:f}, {:f}, {:f})'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))      
     
     def show_gps(self):
-        print('GPS location ({:f}, {:f}, {:f})'.format(self.gps.lat, self.gps.lon, self.gps.alt))      
+        print('GPS location ({:f}, {:f}, {:f})'.format(self.gps.latitude, self.gps.longitude, self.gps.altitude))      
 
 
 
@@ -107,7 +110,7 @@ def main():
     print('!!!! CONTROLLER INIT !!!!')
 
     # ROS loop rate
-    rate = rospy.Rate(20.0)
+    #rate = rospy.Rate(20.0)
 
     # Subscribe to drone state
     rospy.Subscriber('mavros/state', State, cnt.stateCb)
@@ -116,10 +119,10 @@ def main():
     rospy.Subscriber('mavros/local_position/pose', PoseStamped, cnt.posCb)
     
     # subscribe to gps data
-    #rospy.Subscriber('/mavros/global_position/raw/fix', GPSRAW, cnt.gpsCb)
+    rospy.Subscriber('/mavros/global_position/raw/fix', NavSatFix, cnt.gpsCb)
 
     # Setpoint publisher    
-    sp_pub = rospy.Publisher('mavros/setpoint_raw/local', PositionTarget, queue_size=1)
+    rospy.Subscriber('mavros/setpoint_raw/local', PositionTarget, cnt.spCb)
     print("!!!! SUB / PUB INIT !!!!!")
 
 
@@ -143,11 +146,11 @@ def main():
       #  rate.sleep()
         
     # show current state
-    cnt.show_state()
+    #cnt.show_state()
     
     
     # show current position
-    cnt.show_positions()
+    #cnt.show_positions()
     
     
     # show gps signal
