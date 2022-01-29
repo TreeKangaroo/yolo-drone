@@ -12,6 +12,7 @@ from utils.yolo_classes import get_cls_dict
 from utils.display import open_window, set_display, show_fps
 from utils.visualization import BBoxVisualization
 from utils.yolo_with_plugins import TrtYOLO
+from utils.utility import get_distance
 from src.realsense_source import camera_stream
 print('!!!!!!! IMPORTED YOLO UTILS !!!!!')
 
@@ -150,8 +151,8 @@ class yolov4(object):
         # find the bbox for the give class with the higest confidence level
         conf = 0
         bbox = [-1,-1,-1,-1]
-        target_class = 56
-        target_size = (320, 320)
+        target_class = 11
+        target_size = (120, 120)
         
         for i in range(len(boxes)):
             if clss[i]==target_class:
@@ -163,6 +164,8 @@ class yolov4(object):
         if bbox[0] != -1:
             x1, y1, x2, y2 = bbox
             depth_img = depth_img[y1:y2+1, x1:x2+1]
+            distance = int(get_distance(depth_img, (9, 9), 10))
+            
             depth_img = cv2.resize(depth_img, target_size)
             msa = (depth_img/256).astype(np.uint8)
             lsa = (depth_img - msa*256).astype(np.uint8)
@@ -175,8 +178,10 @@ class yolov4(object):
             image = self.bridge.cv2_to_imgmsg(image_data, encoding = 'passthrough')
         else:
             image = Image()
-
-        image.header.frame_id = " ".join(map(str,bbox))
+        
+        info_list=[int((x1+x2)/2), int((y1+y2)/2), distance]
+        
+        image.header.frame_id = " ".join(map(str,info_list))
         image.header.stamp = image_capture_time
         self.detection_pub.publish(image)
         
