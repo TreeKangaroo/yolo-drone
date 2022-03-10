@@ -14,5 +14,5 @@
 	</include>
 		
 	<!-- python code launch -->
-	<node name="offboard_move_test" pkg="yolov4_trt_ros" type="offboard_move_test.py" output="screen"/>
+	<node name="yolo_pid" pkg="yolov4_trt_ros" type="yolo_pid.py" output="screen"/>
 </launch>

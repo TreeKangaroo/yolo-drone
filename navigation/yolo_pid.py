@@ -10,12 +10,34 @@ from geometry_msgs.msg import Point, PoseStamped
 # import all mavros messages and services
 from mavros_msgs.msg import *
 from std_msgs.msg import String, Float64
+from sensor_msgs.msg import Image
 from mavros_msgs.srv import *
 from utils.fcuModes import fcuModes
 from sensor_msgs.msg import NavSatFix
 import time 
 
 class Controller:
+
+    #PID control method
+    def PID(self, Kp, Ki, Kd, MV_bar=0):
+        e_prev = 0
+        #t_prev = -1
+        I = 0
+        MV = MV_bar
+        while True:
+            global reset
+            if reset==True:
+                I=0
+            dt, e = yield MV
+            #e = SP - PV
+            P = Kp * e
+            I = I + Ki*e*dt
+            D = Kd*(e - e_prev)/dt
+            MV = (MV_bar + P + I + D)*10**-3
+            #print(f'MV:{int(MV)} P:{int(P)} I:{int(I)} D:{int(D)} e:{e} e_prev:{e_prev}')
+
+            e_prev = e
+            #t_prev = t
     # initialization method
     def __init__(self):
         # Drone state
@@ -41,13 +63,27 @@ class Controller:
         self.local_pos = Point(0.0, 0.0, 0.0)
 
         # initial values for setpoints
-        self.sp.position.x = 0.0
-        self.sp.position.y = 0.0
-
+        self.sp.velocity.x = 0.0
+        self.sp.velocity.y = 0.0
+        
+         #initialize pid controllers
+        self.x_pid_cnt = self.PID(0.6, 0.000001, 0.07)
+        self.x_pid_cnt.send(None)
+        
+        self.y_pid_cnt = self.PID(0.6, 0.000001, 0.07)
+        self.y_pid_cnt.send(None)
+        
+        self.z_pid_cnt = self.PID(0.6, -0.000001, 0.08, MV_bar=-0.1)
+        self.z_pid_cnt.send(None)
+        
         # setup step size for x, y, z direction
         self.x_step = 0.0
         self.y_step = 0.0
         self.z_step = 0.0
+        
+        self.pre_sp_x = 0.0
+        self.pre_sp_y = 0.0
+        self.pre_sp_z = 0.0
         
         self.yaw_step = 0.0
         
@@ -60,10 +96,16 @@ class Controller:
         
         self.tic = rospy.Time.now().to_sec()
         self.toc = rospy.Time.now().to_sec()
+        self.dt = -1
+        
+        self.firstSight = True
+        self.no_detection = 0
+        self.dv_thresh = 0.1
+        self.vmax =1.0
         
         #new rosbag for data logging
         self.bag = open(r'/home/michelle/catkin_ws/src/yolov4_trt_ros/bagfiles/test.txt', 'w')
-        
+        self.sp_pub = rospy.Publisher('mavros/setpoint_raw/local', PositionTarget, queue_size=1)
         
         # speed of the drone is set using MPC_XY_CRUISE parameter in MAVLink
         # using QGroundControl. By default it is 5 m/s.
@@ -75,15 +117,42 @@ class Controller:
         self.local_pos.x = msg.pose.position.x
         self.local_pos.y = msg.pose.position.y
         self.local_pos.z = msg.pose.position.z
-        print('Current position ({:f}, {:f}, {:f})'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))
-        self.bag.write('Current position ({:f}, {:f}, {:f})\n'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))
-        self.toc = rospy.Time.now().to_sec()
-        print('Current drone state: ', self.state.mode)
-        self.tic = self.toc
+        #print('position {:f} {:f} {:f}'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))
+        self.bag.write('position {:f} {:f} {:f}\n'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))
+        #print('Current drone state: ', self.state.mode)
+
     
+    #update setpoint velocities etc
     def updateSp(self):
-        self.sp.velocity.x =self.x_step
-        self.sp.velocity.y =self.y_step
+        
+        #check acceleration
+        if (self.x_step - self.pre_sp_x) > self.dv_thresh:
+            self.x_step = self.pre_sp_x + self.dv_thresh
+        elif (self.x_step - self.pre_sp_x) < -self.dv_thresh:
+            self.x_step = self.pre_sp_x - self.dv_thresh  
+        
+        #check velocity magnitude
+        if self.x_step > self.vmax:
+            self.sp.velocity.x = self.vmax
+        elif self.x_step < -self.vmax:
+            self.sp.velocity.x = -self.vmax
+        else:
+            self.sp.velocity.x = self.x_step
+       
+         #check acceleration
+        if (self.y_step - self.pre_sp_y) > self.dv_thresh:
+            self.y_step = self.pre_sp_y + self.dv_thresh
+        elif (self.y_step - self.pre_sp_y) < -self.dv_thresh:
+            self.y_step = self.pre_sp_y - self.dv_thresh  
+        
+        #check velocity magnitude
+        if self.y_step > self.vmax:
+            self.sp.velocity.y = self.vmax
+        elif self.y_step < -self.vmax:
+            self.sp.velocity.y = -self.vmax
+        else:
+            self.sp.velocity.y = self.y_step
+
         if self.local_pos.z < self.ALT_SP -0.5:
             self.sp.velocity.z = 0.25
         elif self.local_pos.z > self.ALT_SP +0.5:
@@ -94,33 +163,72 @@ class Controller:
         # update yaw
         self.sp.yaw_rate = self.yaw_step
         
+        #update previous velocities
+        self.pre_sp_x = self.sp.velocity.x
+        self.pre_sp_y = self.sp.velocity.y
+        self.pre_sp_z = self.sp.velocity.z
+        
+        print('setpoint {:f} {:f} {:f} {:f}\n'.format(self.sp.velocity.x, self.sp.velocity.y, self.sp.velocity.z, self.sp.yaw_rate))
+        self.bag.write('setpoint {:f} {:f} {:f} {:f} {:f} \n'.format(self.sp.velocity.x, self.sp.velocity.y, self.sp.velocity.z, self.sp.yaw_rate, rospy.Time.now().to_sec()))
+   
+    # define PID callback
+    def execute_PID(self, msg):
+        info_list=list(map(int, msg.header.frame_id.split()))
+        
+        print('distance {:d} {:f}'.format(info_list[2], rospy.Time.now().to_sec()))
+        self.bag.write('distance {:d} {:f}\n'.format(info_list[2], rospy.Time.now().to_sec()))
+        print('object {:d} {:d}'.format(info_list[0], info_list[1]))
+        self.bag.write('object {:d} {:d} {:f}\n'.format(info_list[0], info_list[1], rospy.Time.now().to_sec()))
+        
+        
+        
+        if info_list!=[0,0,0]:
+            self.no_detection=0
+            if self.firstSight:
+                self.tic=rospy.Time.now().to_sec()
+                self.firstSight = False
+                
+            else:
+                center_offset = (320-info_list[0], 240-info_list[1])
+                
+                self.toc=rospy.Time.now().to_sec()
+                self.dt= self.toc-self.tic
+                print('dt = ', self.dt)
+                self.tic=self.toc
+                
+                self.x_step=self.x_pid_cnt.send((self.dt, info_list[2]-3000))
+                self.y_step=self.y_pid_cnt.send((self.dt, center_offset[0]))
+                self.z_step=self.z_pid_cnt.send((self.dt, center_offset[1]))
+    
+        else:
+            self.no_detection+=1
+            if self.no_detection>10:     
+                self.x_step=0.0
+                self.y_step=0.0
+                self.z_step=0.0
+            if self.no_detection>40:
+                self.firstSight=True
+            
+        self.updateSp()
+    	self.sp_pub.publish(self.sp)  
+    	
+    	  
     ## Drone State callback
     def stateCb(self, msg):
         self.state = msg
-        self.bag.write('Current drone state: '+self.state.mode+'\n')
+        self.bag.write('state '+self.state.mode+'\n')
 
     ## GPS callback
     def gpsCb(self, msg):
         self.gps = msg
         self.alt=self.gps.altitude
-        print('GPS location ({:f}, {:f}, {:f})'.format(self.gps.latitude, self.gps.longitude, self.alt))      
-        self.bag.write('GPS location ({:f}, {:f}, {:f})\n'.format(self.gps.latitude, self.gps.longitude, self.alt))
+        #print('GPS {:f}, {:f}, {:f}'.format(self.gps.latitude, self.gps.longitude, self.alt))      
+        #self.bag.write('GPS {:f} {:f} {:f}\n'.format(self.gps.latitude, self.gps.longitude, self.alt))
     
     def relaltCb(self, msg):
         self.rel_alt=msg.data
-        print("Relative altitude: ({:f})".format(self.rel_alt))  
-        self.bag.write("Relative altitude: ({:f})\n".format(self.rel_alt))  
-        
-    # functions
-    def show_state(self):
-        print('Current drone state: ', self.state)
-        
-    def show_positions(self):
-        print('Current position ({:f}, {:f}, {:f})'.format(self.local_pos.x, self.local_pos.y, self.local_pos.z))           
-
-
-
-
+        #print("altitude {:f}".format(self.rel_alt))  
+        #self.bag.write("altitude {:f}\n".format(self.rel_alt))         
 
 # Main function
 def main():
@@ -131,10 +239,16 @@ def main():
     # flight mode object
     modes = fcuModes()
     
+    #reset pid controllers; zero the I
+    global reset
+    reset = True
+    
     # controller object
     cnt = Controller()
     print('!!!! CONTROLLER INIT !!!!')
-
+    
+    reset=False
+    
     # ROS loop rate
     rate = rospy.Rate(20.0)
 
@@ -148,65 +262,33 @@ def main():
     rospy.Subscriber('/mavros/global_position/raw/fix', NavSatFix, cnt.gpsCb)
      # subscribe to gps data
     rospy.Subscriber('/mavros/global_position/rel_alt', Float64, cnt.relaltCb)
-
-    # Setpoint publisher    
-    sp_pub = rospy.Publisher('mavros/setpoint_raw/local', PositionTarget, queue_size=1)
+    
+    #subscribe to yolo center offset and object's distance away
+    rospy.Subscriber('detections', Image, cnt.execute_PID)
     print("!!!! SUB / PUB INIT !!!!!")
     
     
     count=0
-    init_gps=[]
-    init_ra=[]
+    #init_gps=[]
+    #init_ra=[]
     init_pos=[]
     height=1.5
     time.sleep(10)
-    while len(init_gps)<25:
-        init_gps.append(cnt.alt)
+    while len(init_pos)<25:
+        #init_gps.append(cnt.alt)
         init_pos.append(cnt.local_pos.z)
-        init_ra.append(cnt.rel_alt)
+        #init_ra.append(cnt.rel_alt)
         time.sleep(0.2)
     
     #cnt.ALT_SP = sum(init_gps)/len(init_gps)+height
-    gps_mean = np.array(init_gps).mean()
-    ra_mean = np.array(init_ra).mean()
+    #gps_mean = np.array(init_gps).mean()
+    #ra_mean = np.array(init_ra).mean()
     pos_mean = np.array(init_pos).mean()
     #print('GPS average ', gps_data)
     cnt.ALT_SP = pos_mean + height
-    
-        
-    #print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!         ALT SP = ', cnt.ALT_SP, '!!!!!!!!!!!!')
-    cnt.bag.write('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!         average gps = ({:f})\n'.format(gps_mean))
-    cnt.bag.write('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!         average relative altitude = ({:f})\n'.format(ra_mean))
-    cnt.bag.write('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!         average local z position = ({:f})\n'.format(pos_mean))
-        
-    #move a bit hopefully not a lot
+    print('!!!!!!!!!!!!!    INITIAL ALTITUDE ESTABLISHED    !!!!!!!!!!!')    
     while not rospy.is_shutdown():
-
-        if cnt.state.mode == 'OFFBOARD':
-            if count<40 or count>120:
-                cnt.x_step=0.0
-                cnt.y_step=0.0
-                cnt.z_step=0.0
-                cnt.yaw_step=0.0
-            elif count>=40 and count<=120:
-                cnt.x_step=0.0
-                cnt.y_step=0.0
-                cnt.z_step=0.0
-                cnt.yaw_step=0.6
-            count+=1
-            
-        else:
-            cnt.x_step=0.0
-            cnt.y_step=0.0
-            cnt.z_step=0.0
-            cnt.yaw_step=0.0
-            count=0
-            
-        cnt.updateSp()
-        cnt.bag.write('Setpoint velocity ({:f}, {:f}, {:f}, {:f})\n'.format(cnt.sp.velocity.x, cnt.sp.velocity.y, cnt.sp.velocity.z, cnt.sp.yaw_rate))
-        sp_pub.publish(cnt.sp)
-        rate.sleep()
-            
+        rospy.spin()
             
     print('shutting down now')
     cnt.bag.close()

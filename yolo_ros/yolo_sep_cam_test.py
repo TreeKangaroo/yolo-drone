@@ -19,7 +19,7 @@ from yolov4_trt_ros.msg import Detector2D
 from vision_msgs.msg import BoundingBox2D
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-
+import time
 
 class yolov4(object):
     def __init__(self):
@@ -32,6 +32,8 @@ class yolov4(object):
         self.trt_yolo = TrtYOLO(
             (self.model_path + self.model), (self.h, self.w), self.category_num)
         self.tic = time.time()
+        self.times = []
+        print('Yolo Initialized')
 
     def __del__(self):
         """ Destructor """
@@ -53,20 +55,20 @@ class yolov4(object):
         
         rospack = rospkg.RosPack()
         package_path = rospack.get_path("yolov4_trt_ros")
-        self.video_topic = rospy.get_param("/video_topic", "/raw")
-        self.model = rospy.get_param("/model", "yolov4Custom")
+        self.video_topic = rospy.get_param("/video_topic", "raw")
+        self.model = rospy.get_param("/model", "yolov4")
         self.model_path = rospy.get_param(
-            "/model_path", package_path + "/yolo/")
+            "/model_path", package_path + "/yolo_ros/yolo/")
         self.category_num = rospy.get_param("/category_number", 80)
-        self.input_shape = rospy.get_param("/input_shape", "416")
+        self.input_shape = rospy.get_param("/input_shape", "288")
         self.conf_th = rospy.get_param("/confidence_threshold", 0.5)
-        self.show_img = rospy.get_param("/show_image", True)
+        self.show_img = rospy.get_param("/show_image", False)
         #self.image_sub = rospy.Subscriber(
             #self.video_topic, Image, self.img_callback, queue_size=1, buff_size=1920*1080*3)
         self.image_sub = rospy.Subscriber(
-            self.video_topic, Image, self.img_callback, queue_size=1, buff_size=640*480*3)
+            self.video_topic, Image, self.img_callback, queue_size=1, buff_size=640*480*10)
         self.detection_pub = rospy.Publisher(
-            "detections", Detector2DArray, queue_size=1)
+            "detections", Image, queue_size=1)
         self.overlay_pub = rospy.Publisher(
             "/result/overlay", Image, queue_size=1)
 
@@ -97,28 +99,41 @@ class yolov4(object):
 
         # converts from ros_img to cv_img for processing
         try:
+            #print('enter detect')
+            img_capture_time=ros_img.header.stamp
             cv_img = self.bridge.imgmsg_to_cv2(
                 ros_img, desired_encoding="passthrough")
-            rospy.logdebug("ROS Image converted for processing")
+            
+            color_img = cv_img[:,:, 0:3]
+            depth_img = cv_img[:,:, 3:5]
+            
+            #print("ROS Image converted for processing")
         except CvBridgeError as e:
-            rospy.loginfo("Failed to convert image %s", str(e))
+            print("Failed to convert image %s", str(e))
 
-        if cv_img is not None:
+        if color_img is not None:
 
-            boxes, confs, clss = self.trt_yolo.detect(cv_img, self.conf_th)
-
-            cv_img = self.vis.draw_bboxes(cv_img, boxes, confs, clss)
+            boxes, confs, clss = self.trt_yolo.detect(color_img, self.conf_th)
+            #print('detected')
+            cv_img = self.vis.draw_bboxes(color_img, boxes, confs, clss)
+            self.publisher(color_img, depth_img, boxes, confs, clss, img_capture_time)
+           
+            
             self.toc = time.time()
-            fps = 1.0 / (self.toc - self.tic)
+            self.times.append(self.toc - self.tic)
             self.tic = self.toc
+                        
+            self.times = self.times[-50:]
+            fps = len(self.times)/sum(self.times)
+            print('FPS = ', fps)
 
-            self.publisher(boxes, confs, clss)
+            
 
             if self.show_img:
-                cv_img = show_fps(cv_img, fps)
+                cv_img = show_fps(color_img, fps)
                 cv2.imshow("YOLOv4 DETECTION RESULTS", cv_img)
                 cv2.waitKey(1)
-
+        """
         # converts back to ros_img type for publishing
         try:
             overlay_img = self.bridge.cv2_to_imgmsg(
@@ -127,43 +142,56 @@ class yolov4(object):
             self.overlay_pub.publish(overlay_img)
         except CvBridgeError as e:
             rospy.loginfo("Failed to convert image %s", str(e))
-
-    def publisher(self, boxes, confs, clss):
-        """ Publishes to detector_msgs
-
-        Parameters:
-        boxes (List(List(int))) : Bounding boxes of all objects
-        confs (List(double))    : Probability scores of all objects
-        clss  (List(int))    : Class ID of all classes
         """
-        detection2d = Detector2DArray()
-        detection = Detector2D()
-        detection2d.header.stamp = rospy.Time.now()
-        detection2d.header.frame_id = "camera" #change accordingly
         
-        for i in range(len(boxes)):
-            # boxes : xmin, ymin, xmax, ymax
-            for _ in boxes:
-                detection.header.stamp = rospy.Time.now()
-                detection.header.frame_id = "camera" # change accordingly
-                detection.results.id = clss[i]
-                detection.results.score = confs[i]
-                
-                detection.bbox.center.x = boxes[i][0] + (boxes[i][2] - boxes[i][0])/2
-                detection.bbox.center.y = boxes[i][1] + (boxes[i][3] - boxes[i][1])/2
-                detection.bbox.center.theta = 0.0  # change if required
-                
-                detection.bbox.size_x = abs(boxes[i][0] - boxes[i][2])
-                detection.bbox.size_y = abs(boxes[i][1] - boxes[i][3])
+    def publisher(self, color_img, depth_img, boxes, confs, clss, image_capture_time):
+            """ Publishes to detector_msgs
 
-            detection2d.detections.append(detection)
-        
-        self.detection_pub.publish(detection2d)
+            Parameters:
+            boxes (List(List(int))) : Bounding boxes of all objects
+            confs (List(double))    : Probability scores of all objects
+            clss  (List(int))    : Class ID of all classes
+            """
+            
+            # find the bbox for the give class with the higest confidence level
+            conf = 0
+            bbox = [-1,-1,-1,-1]
+            target_class = 11
+            target_size = (60, 60)
+            
+            for i in range(len(boxes)):
+                if clss[i]==target_class:
+                    if confs[i]>conf:
+                        conf=confs[i]
+                        bbox = boxes[i]
+            
+            # If object detected, crop data within the bbox
+            if bbox[0] != -1:
+                x1, y1, x2, y2 = bbox
+                depth_img = depth_img[y1:y2+1, x1:x2+1]
+                #distance = int(get_distance(depth_img, (9, 9), 10))
+                
+                print('detect')
+                depth_img = cv2.resize(depth_img, target_size)
+                #if not self.depth_only:
+                #    color_img = color_img[y1:y2+1, x1:x2+1]
+                #    color_img = cv2.resize(color_img, target_size)
+                #    image_data = np.concatenate((color_img, image_data), axis=2)
+                
+                image = self.bridge.cv2_to_imgmsg(depth_img, encoding = 'passthrough')
+                #info_list=[int((x1+x2)/2), int((y1+y2)/2), distance]
+            else:
+                image = Image()
+                #info_list=[0,0,0]
+            
+            #image.header.frame_id = " ".join(map(str,info_list))
+            image.header.stamp = image_capture_time
+            self.detection_pub.publish(image)
 
 
 def main():
-    yolo = yolov4()
     rospy.init_node('yolov4_trt_ros', anonymous=True)
+    yolo = yolov4()
     try:
         rospy.spin()
     except KeyboardInterrupt:

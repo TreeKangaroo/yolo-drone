@@ -12,15 +12,12 @@ from utils.yolo_classes import get_cls_dict
 from utils.display import open_window, set_display, show_fps
 from utils.visualization import BBoxVisualization
 from utils.yolo_with_plugins import TrtYOLO
-from utils.utility import get_distance
 from src.realsense_source import camera_stream
-print('!!!!!!! IMPORTED YOLO UTILS !!!!!')
 
 import rospy
 import rospkg
-from msg import *
-#from msg import Detector2DArray
-#from msg import Detector2D
+from yolov4_trt_ros.msg import Detector2DArray
+from yolov4_trt_ros.msg import Detector2D
 from vision_msgs.msg import BoundingBox2D
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -32,9 +29,7 @@ class yolov4(object):
 
         self.bridge = CvBridge()
         self.init_params()
-        print("!!!!!!!!!!!!!!!!!! PARAMS INIT !!!!!!!!!!!")
         self.init_yolo()
-        print("!!!!!!!!!!!!!!!!!! YOLO INIT !!!!!!!!!!!")
         #self.cuda_ctx = cuda.Device(0).make_context()
         self.trt_yolo = TrtYOLO(
             (self.model_path + self.model), (self.h, self.w), self.category_num)
@@ -101,8 +96,7 @@ class yolov4(object):
 
         # converts from ros_img to cv_img for processing
         camera = camera_stream()
-        video=cv2.VideoWriter('/home/michelle/catkin_ws/src/yolov4_trt_ros/bagfiles/video.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 15.0, (640,480))
-                
+        
         while not rospy.is_shutdown():
             try:
             
@@ -122,17 +116,15 @@ class yolov4(object):
                 
                 if self.show_img:
                     cv_img = self.vis.draw_bboxes(color_img, boxes, confs, clss)
-                    video.write(cv_img)
-                    #cv_img = show_fps(cv_img, fps)
-                    #cv2.imshow("YOLOv4 DETECTION RESULTS", cv_img)
-                    #cv2.waitKey(1)
+                    cv_img = show_fps(cv_img, fps)
+                    cv2.imshow("YOLOv4 DETECTION RESULTS", cv_img)
+                    cv2.waitKey(1)
              
             except KeyboardInterrupt:
                 rospy.on_shutdown(yolo.clean_up())
                 print("Shutting Down")
 
-        video.release()
-        print('video close')
+
             # converts back to ros_img type for publishing
             #try:
            #     overlay_img = self.bridge.cv2_to_imgmsg(
@@ -154,8 +146,8 @@ class yolov4(object):
         # find the bbox for the give class with the higest confidence level
         conf = 0
         bbox = [-1,-1,-1,-1]
-        target_class = 11
-        target_size = (120, 120)
+        target_class = 56
+        target_size = (320, 320)
         
         for i in range(len(boxes)):
             if clss[i]==target_class:
@@ -167,8 +159,6 @@ class yolov4(object):
         if bbox[0] != -1:
             x1, y1, x2, y2 = bbox
             depth_img = depth_img[y1:y2+1, x1:x2+1]
-            distance = int(get_distance(depth_img, (9, 9), 10))
-            
             depth_img = cv2.resize(depth_img, target_size)
             msa = (depth_img/256).astype(np.uint8)
             lsa = (depth_img - msa*256).astype(np.uint8)
@@ -177,14 +167,12 @@ class yolov4(object):
                 color_img = color_img[y1:y2+1, x1:x2+1]
                 color_img = cv2.resize(color_img, target_size)
                 image_data = np.concatenate((color_img, image_data), axis=2)
-            
+
             image = self.bridge.cv2_to_imgmsg(image_data, encoding = 'passthrough')
-            info_list=[int((x1+x2)/2), int((y1+y2)/2), distance]
         else:
             image = Image()
-            info_list=[0,0,0]
-        
-        image.header.frame_id = " ".join(map(str,info_list))
+
+        image.header.frame_id = " ".join(map(str,bbox))
         image.header.stamp = image_capture_time
         self.detection_pub.publish(image)
         

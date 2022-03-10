@@ -26,5 +26,5 @@
 	</include>
 		
 	<!-- python code launch -->
-	<node name="test_mavros" pkg="yolov4_trt_ros" type="test_mavros.py" output="screen"/>
+	<node name="yolo_pid" pkg="yolov4_trt_ros" type="yolo_pid.py" output="screen"/>
 </launch>
