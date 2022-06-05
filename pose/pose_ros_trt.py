@@ -33,7 +33,7 @@ class TrtPose:
         self.cuda_ctx = cuda.Device(0).make_context()
         self.TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
         self.trt_runtime = trt.Runtime(self.TRT_LOGGER)
-        self.load_engine('/home/michelle/catkin_ws/src/yolov4_trt_ros/pose/donModel.plan')
+        self.load_engine('/home/michelle/catkin_ws/src/yolov4_trt_ros/pose/model_ds_60.plan')
         self.context = self.engine.create_execution_context()
         self.allocate_buffers(trt.float32)
         
@@ -84,8 +84,10 @@ class pose:
         #self.cuda_ctx = cuda.Device(0).make_context()
         self.trt_pose = TrtPose()
         
-        self.img_sub = rospy.Subscriber('/detections', Image, self.callback_detection, queue_size=1, buff_size=640*480*6)
-        self.pose_pub = rospy.Publisher('/poseLabel', Int16, queue_size=1)
+        self.img_sub = rospy.Subscriber('/detections', Image, self.callback_detection, queue_size=1, buff_size=60*60*3)
+        #self.pose_pub = rospy.Publisher('/poseLabel', Int16, queue_size=1)
+        
+        self.bag = open(r'/home/michelle/catkin_ws/src/yolov4_trt_ros/bagfiles/pose.txt', 'w')
 
     def __del__(self):
         """ Destructor """
@@ -103,50 +105,37 @@ class pose:
             #del self.cuda_ctx    
 
     def callback_detection(self, ros_data):  
-        # get bonding box
-        bbox = [int(x) for x in ros_data.header.frame_id.split()]
-        
-        if bbox[0] != -1:      # object of interest detected
-            img = self.bridge.imgmsg_to_cv2(ros_data, desired_encoding='passthrough')
-            # reconstuct depth data and separate color image and depth data
-            r, c, z = img.shape
-            if z == 5:
-                color_image = img[:, :, :3]
-                depth_data = img[:, :, 3]*256 + img[:, :, 4]
-            else:
-                depth_data = img[:, :, 0]*256 + img[:, :, 1]
-        
-            show_image = True
-            if show_image:
-                if z ==5:
-                    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_data, alpha=0.03), cv2.COLORMAP_JET)
-                    image = np.hstack((color_image, depth_colormap))
-                else:
-                    image = cv2.applyColorMap(cv2.convertScaleAbs(depth_data, alpha=0.03), cv2.COLORMAP_JET)
-            
-                cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-                cv2.imshow('RealSense', image)        
-                cv2.waitKey(1)
+           
+        img = self.bridge.imgmsg_to_cv2(ros_data, desired_encoding='passthrough')
 
-            # perform pose detection
-            depth_data = (depth_data/65536).astype(np.float32)
-            depth_data = np.expand_dims(depth_data, axis=(0, 3))
-            out = self.trt_pose.detect(depth_data)
-            print(np.argmax(out))
-            self.pose_pub.publish(out)
-        else:
-            print('No object detected')
+        depth_data = img[:, :, 0]*256 + img[:, :, 1]
+    
+        show_image = False
+        if show_image:
+            image = cv2.applyColorMap(cv2.convertScaleAbs(depth_data, alpha=0.03), cv2.COLORMAP_JET)
+            cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow('RealSense', image)        
+            cv2.waitKey(1)
 
+        # perform pose detection
+        depth_data = (depth_data/8000).astype(np.float32)
+        depth_data[depth_data>1.0]=1.0
+        depth_data = np.expand_dims(depth_data, axis=(0, 3))
+        out = self.trt_pose.detect(depth_data)
+        self.bag.write('pose {:d} {:f}\n'.format(np.argmax(out), rospy.Time.now().to_sec()))
+        print(np.argmax(out))
+       
 
 def main():
     pose_detect = pose()    
     rospy.init_node('Pose_Detection', anonymous=True)
-    try:
+    
+    while not rospy.is_shutdown():
         rospy.spin()
-    except KeyboardInterrupt:
-        #rospy.on_shutdown(yolo.clean_up())
-        cv2.destroyAllWindows()
-        print("Shutting down")    
+            
+    print('shutting down pose estimation')
+    pose_detect.bag.close()
+    print('pose bag closed') 
       
 
 if __name__ == '__main__':

@@ -151,11 +151,11 @@ class yolov4(object):
         clss  (List(int))    : Class ID of all classes
         """
         
-        # find the bbox for the give class with the higest confidence level
+        # find the bbox for the given class with the higest confidence level
         conf = 0
         bbox = [-1,-1,-1,-1]
-        target_class = 11
-        target_size = (120, 120)
+        target_class = 1
+        target_size = (60, 60)
         
         for i in range(len(boxes)):
             if clss[i]==target_class:

@@ -70,7 +70,7 @@ class Controller:
         self.x_pid_cnt = self.PID(0.6, 0.000001, 0.07)
         self.x_pid_cnt.send(None)
         
-        self.y_pid_cnt = self.PID(0.6, 0.000001, 0.07)
+        self.y_pid_cnt = self.PID(1.8, 0.000001, 0.21)
         self.y_pid_cnt.send(None)
         
         self.z_pid_cnt = self.PID(0.6, -0.000001, 0.08, MV_bar=-0.1)
@@ -290,9 +290,9 @@ def main():
     while not rospy.is_shutdown():
         rospy.spin()
             
-    print('shutting down now')
+    print('shutting down yolo_pid')
     cnt.bag.close()
-    print('bag closed')
+    print('yolo_pid bag closed')
 
     
 if __name__ == '__main__':
