@@ -1,0 +1,143 @@
+~~Data recording for YOLO amalgamation vs only real data trained networks~~~
+
+**Confidence thresholds all at 0.5**
+
+Amalgamation:
+True positive  5790 rate  0.7599422496390602
+True negative  667 rate  0.0875442971518572
+False positive  513 rate  0.06733167082294264
+False negative  649 rate  0.08518178238613991
+
+With modified confidence score, mu =1:
+True positive  5815 rate  0.7631233595800525
+True negative  665 rate  0.08727034120734908
+False positive  515 rate  0.06758530183727034
+False negative  625 rate  0.08202099737532809
+
+With modified confidence score, mu =5:
+True positive  5865 rate  0.7696850393700787
+True negative  660 rate  0.08661417322834646
+False positive  520 rate  0.06824146981627296
+False negative  575 rate  0.07545931758530183
+
+With modified confidence score, mu =10:
+True positive  5888 rate  0.7727034120734908
+True negative  660 rate  0.08661417322834646
+False positive  520 rate  0.06824146981627296
+False negative  552 rate  0.07244094488188976
+
+With modified confidence score, mu =15:            
+True positive  5890 rate  0.7729658792650919
+True negative  660 rate  0.08661417322834646
+False positive  520 rate  0.06824146981627296
+False negative  550 rate  0.07217847769028872
+
+With modified confidence score, mu =30:
+True positive  5916 rate  0.7763779527559055
+True negative  660 rate  0.08661417322834646
+False positive  520 rate  0.06824146981627296
+False negative  524 rate  0.06876640419947506
+
+With modified confidence score, mu =40:
+The time of execution of above program is : 411.8516209125519  s
+True positive  5978 rate  0.784514435695538
+True negative  633 rate  0.08307086614173229
+False positive  547 rate  0.07178477690288713
+False negative  462 rate  0.06062992125984252
+
+With modified confidence score, mu =50:
+The time of execution of above program is : 397.12179946899414  s
+True positive  5981 rate  0.7849081364829397
+True negative  633 rate  0.08307086614173229
+False positive  547 rate  0.07178477690288713
+False negative  459 rate  0.06023622047244095
+
+With modified confidence score, mu =60:
+The time of execution of above program is : 423.33309054374695  s
+True positive  5981 rate  0.7849081364829397
+True negative  633 rate  0.08307086614173229
+False positive  547 rate  0.07178477690288713
+False negative  459 rate  0.06023622047244095
+
+With modified confidence score, mu =70:
+True positive  5983 rate  0.7851706036745407
+True negative  633 rate  0.08307086614173229
+False positive  547 rate  0.07178477690288713
+False negative  457 rate  0.0599737532808399
+
+With modified confidence score, mu =150:
+True positive  5988 rate  0.7858267716535433
+True negative  558 rate  0.07322834645669292
+False positive  622 rate  0.08162729658792651
+False negative  452 rate  0.05931758530183727
+
+With modified confidence score, mu =300:
+The time of execution of above program is : 412.0857164859772  s
+True positive  5996 rate  0.7868766404199475
+True negative  497 rate  0.0652230971128609
+False positive  683 rate  0.08963254593175853
+False negative  444 rate  0.05826771653543307
+
+With modified confidence score, mu =1000:
+The time of execution of above program is : 403.8392870426178  s
+True positive  6014 rate  0.7892388451443569
+True negative  497 rate  0.0652230971128609
+False positive  683 rate  0.08963254593175853
+False negative  426 rate  0.05590551181102362
+
+
+With modified confidence score, mu =30 pixel-wise:
+True positive  6053 rate  0.7943569553805774
+True negative  632 rate  0.08293963254593176
+False positive  548 rate  0.07191601049868766
+False negative  387 rate  0.05078740157480315
+
+With modified confidence score, mu =25 pixel-wise:
+True positive  6047 rate  0.7935695538057743
+True negative  632 rate  0.08293963254593176
+False positive  548 rate  0.07191601049868766
+False negative  393 rate  0.0515748031496063
+
+With modified confidence score, mu =35 pixel-wise:
+The time of execution of above program is : 964.6807370185852  s
+True positive  6056 rate  0.794750656167979
+True negative  632 rate  0.08293963254593176
+False positive  548 rate  0.07191601049868766
+False negative  384 rate  0.050393700787401574
+
+real:
+True positive  5911 rate  0.7758235988974931
+True negative  233 rate  0.030581441134007088
+False positive  947 rate  0.12429452684079276
+False negative  528 rate  0.06930043312770705
+
+
+**Thresholds all at 0.25**
+
+Amalgamation
+True positive  6101 rate  0.8007612547578422
+True negative  446 rate  0.05853786586166163
+False positive  734 rate  0.0963381021131382
+False negative  338 rate  0.04436277726735792
+
+real:
+True positive  6159 rate  0.8083738023362645
+True negative  208 rate  0.027300170626066413
+False positive  972 rate  0.12757579734873342
+False negative  280 rate  0.03675022968893556
+
+
+**Thresholds all at 0.75**
+
+Amalgamation:
+True positive  4631 rate  0.6078225488909306
+True negative  936 rate  0.12285076781729885
+False positive  244 rate  0.03202520015750098
+False negative  1808 rate  0.2373014831342696
+
+real:
+True positive  5366 rate  0.7042919018243864
+True negative  664 rate  0.08715054469090432
+False positive  516 rate  0.06772542328389553
+False negative  1073 rate  0.14083213020081375
+

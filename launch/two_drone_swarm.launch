@@ -1,0 +1,41 @@
+<launch>
+	
+	<!-- yolov4_trt_node -->
+	<node pkg="yolov4_trt_ros" type="yolo_tiny_416_leader_test.py" name="leader_node" output="screen">		
+		<param name="video_topic" type="string" value="/video_source/raw" />
+		<param name="model" type="string" value="yolov4-tiny-amalgamation" />	
+		<param name="model_path" type="string" value="$(find yolov4_trt_ros)/yolo_ros/yolo" />
+		<param name="input_shape" type="string" value="416" />
+		<param name="category_number" type="int" value="2" />
+		<param name="confidence_threshold" type="double" value="0.5" />
+		<param name="show_image" type="bool" value="True" />
+	</node>
+	
+	<!--yolov4_trt_node -->
+	<node pkg="yolov4_trt_ros" type="tello_script.py" name="wingman_node" output="screen">		
+		<param name="video_topic" type="string" value="/video_source/raw" />
+		<param name="model" type="string" value="yolov4-tiny-amalgamation" />	
+		<param name="model_path" type="string" value="$(find yolov4_trt_ros)/yolo/" />
+		<param name="input_shape" type="string" value="416" />
+		<param name="category_number" type="int" value="2" />
+		<param name="confidence_threshold" type="double" value="0.5" />
+		<param name="show_image" type="bool" value="True" />
+	</node> 
+	
+	<!-- mavros launch node -->
+	<include file="$(find mavros)/launch/node.launch">
+		<arg name="pluginlists_yaml" value="$(find mavros)/launch/px4_pluginlists.yaml" />
+		<arg name="config_yaml" value="$(find mavros)/launch/px4_config.yaml" />
+
+		<arg name="fcu_url" value="/dev/ttyTHS0:115200" />
+		<arg name="gcs_url" value="255" />
+		<arg name="tgt_system" value="1" />
+		<arg name="tgt_component" value="1" />
+		<arg name="log_output" value="screen" />
+		<arg name="fcu_protocol" value="v1.0" />
+		<arg name="respawn_mavros" default="false" />
+	</include>
+		
+	<!-- python code launch -->
+	<node name="yolo_pid_swarmleader" pkg="yolov4_trt_ros" type="yolo_pid_swarmleader.py" output="screen"/>
+</launch>

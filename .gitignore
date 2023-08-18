@@ -1,0 +1,13 @@
+yolo_ros/yolo/yolov4-416.trt
+yolo_ros/yolo/yolov4-288.trt
+yolo_ros/yolo/yolov4-288.onnx
+yolo_ros/yolo/yolov4.weights
+yolo_ros/yolo/yolov4-416.onnx
+yolo_ros/yolo/yolov4Custom-416.trt
+yolo_ros/yolo/yolov4Custom-288.trt
+yolo_ros/yolo/yolov4-288.cfg
+yolo_ros/yolo/yolov4-288.weights
+yolo_ros/yolo/yolov4-416.cfg
+yolo_ros/yolo/yolov4-416.weights
+yolo_ros/yolo/yolov4.cfg
+
