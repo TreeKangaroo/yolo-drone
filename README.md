@@ -20,7 +20,7 @@ The drone is based on the Holybro X500 developer frame. It carries a Jetson Xavi
 
 ## Notes on software
 ---
-**Important: Because I did not really know how ROS worked when I started this project, all the code files recognize the package name as yolov4_trt_ros. Due to the hassle of renaming ROS packages, I decided to just leave it. Before building a clone of this repo, it will probably be helpful to change the folder name to yolov4_trt_ros**
+**Important: In the current version, all the code files recognize the package name as yolov4_trt_ros. Before building a clone of this repo, it will probably be helpful to change the folder name to yolov4_trt_ros instead of yolo_drone**
 - There are quite a few codes in every file used for testing different components of the stack.
 - There are also quite a few backup files from previous versions which may or may not work with how things are configured now.
 
