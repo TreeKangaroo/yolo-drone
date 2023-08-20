@@ -20,3 +20,27 @@ The wingman drones are DJI Tello EDU drones spray-painted red to be more disting
 ---
 ![flowchart](software3.png)
 
+
+## Software dependencies
+---
+- [ROS Melodic](http://wiki.ros.org/melodic) 
+- [YOLO ROS implementation](https://github.com/indra4837/yolov4_trt_ros)
+- [pyrealsense2](https://lieuzhenghong.com/how_to_install_librealsense_on_the_jetson_nx/) for Intel Realsense
+- [MAVROS](https://docs.px4.io/v1.12/en/ros/mavros_installation.html)
+- [Docker containers](https://www.docker.com/) for multiple wingmen connections
+- [DJITelloPy](https://github.com/damiafuentes/DJITelloPy/tree/master) for interfacing with Tello
+- [PyAV](https://pypi.org/project/av/) for working with Tello video
+- Other standard python libraries (numpy, etc.)
+- and all dependencies of these libraries
+
+## References and Acknowledgements
+---
+- ROS implementation of YOLO with TensorRT acceleration from [indra4837](https://github.com/indra4837/yolov4_trt_ros)
+- [MAVROS](http://wiki.ros.org/mavros)
+- Intel Realsense python [library](https://github.com/IntelRealSense/librealsense)
+- DJITelloPy library from [damiafuentes](https://github.com/damiafuentes/DJITelloPy)
+- Docker container for wifi communication with multiple Tello drones from [anqixu](https://github.com/anqixu/tello_driver)
+- [Techzizou's Medium article and notebook](https://medium.com/analytics-vidhya/train-a-custom-yolov4-tiny-object-detector-using-google-colab-b58be08c9593) for training the YOLOv4-tiny network using custon datasets
+- [Makesense.ai](makesense.ai) tool for labeling image data
+- PX4 forums and other online discussion
+- [Garwin Family Foundation](https://garwinfamilyfoundation.org/) for project funding
