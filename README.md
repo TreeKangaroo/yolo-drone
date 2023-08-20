@@ -16,6 +16,8 @@ The leader drone hardware is the same as used in the single autonomous drone pro
 
 The wingman drones are DJI Tello EDU drones spray-painted red to be more distinguishable from the background environment. These mini-drones carry an optical camera and send their camera stream to the leader drone via a wifi link. After processing the video, the leader drone sends movement commands back to the wingmen. 
 
+If connecting multiple wingmen to the leader drone, a separate wifi dongle is needed for each wingman connected (plus one additional wifi connection for SSH-ing into the leader drone's computer to control flight tests)
+
 ## Software Organization
 ---
 ![flowchart](software3.png)
