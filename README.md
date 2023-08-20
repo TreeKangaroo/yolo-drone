@@ -19,8 +19,24 @@ The wingman drones are DJI Tello EDU drones spray-painted red to be more disting
 ## Software Organization
 ---
 ![flowchart](software3.png)
+- YOLO_Training_Colab_Notebooks contains Jupyter Notebook files that can be run in Google Colab to train the YOLOv4-tiny network on custom datasets, generate confusion matrices, and work with existing datasets.
+- launch contains ROS launch files that start multiple scripts at the same time
+- navigation handles leader drone movement
+- pose is not used in the swarm implementation
+- save_images is used to collect image data for dataset generation or other studies
+- tello contains several programs to test different functions of the tello and its connections
+- wifi_docker_proxy contains the code needed to run the docker container for port forwarding
+- yolo_ros contains all YOLO code as well as wingman controls
 
+## Notes on software
+---
+**Important: Because I did not really know how ROS worked when I started this project, all the code files recognize the package name as yolov4_trt_ros. Due to the hassle of renaming ROS packages, I decided to just leave it. Before building a clone of this repo, it will probably be helpful to change the folder name to yolov4_trt_ros**
 
+**Also important! To use the docker wifi port forwarding with multiple Tello drones, the djitellopy library must be built from source ([see how here](https://github.com/damiafuentes/DJITelloPy/tree/master)]) and modified. The ./djitellopy/tello.py file from the cloned repo should be replaced with the ./tello/tello.py from this repo. This will allow port forwarding**
+
+- There are quite a few codes in every file used for testing different components of the stack.
+- There are also quite a few backup files from previous versions which may or may not work with how things are configured now.
+  
 ## Software dependencies
 ---
 - [ROS Melodic](http://wiki.ros.org/melodic) 
