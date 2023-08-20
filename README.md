@@ -32,7 +32,7 @@ If connecting multiple wingmen to the leader drone, a separate wifi dongle is ne
 
 ## Notes on software
 ---
-**Important: Because I did not really know how ROS worked when I started this project, all the code files recognize the package name as yolov4_trt_ros. Due to the hassle of renaming ROS packages, I decided to just leave it. Before building a clone of this repo, it will probably be helpful to change the folder name to yolov4_trt_ros**
+**Important: In the current version, all the code files recognize the package name as yolov4_trt_ros. Before building a clone of this repo, it will probably be helpful to change the folder name to yolov4_trt_ros instead of yolo_drone**
 
 **Also important! To use the docker wifi port forwarding with multiple Tello drones, the djitellopy library must be built from source ([see how here](https://github.com/damiafuentes/DJITelloPy/tree/master)]) and modified. The ./djitellopy/tello.py file from the cloned repo should be replaced with the ./tello/tello.py from this repo. This will allow port forwarding**
 
