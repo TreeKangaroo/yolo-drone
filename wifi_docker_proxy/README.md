@@ -1,5 +1,7 @@
 Note all Tello drones are configured to have an IP of `192.168.10.1`
 
+Each Tello drone must be connected to a separate wifi dongle
+
 ### Instructions:
 (the 1 and 2 versions of the file can be used to simultaneously connect to different wingman drones; each will be ran in a different terminal window)
 
